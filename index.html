@@ -65,7 +65,6 @@
     };
 
     function preload() {
-        // נטען את הקובץ conj.csv (חייב להיות באותה תיקייה)
         conjTable = loadTable("conj.csv", "csv", "header");
     }
 
@@ -177,7 +176,7 @@
         fill(255, 200);
         textSize(16);
         text('Selected: ' + selectedVerbs.length + ' verbs', width/2, height - 60);
-        text('Press H during game to toggle help', width/2, height - 40);
+        text('Press 0 during game to toggle help', width/2, height - 40);
     }
 
     function drawGameplay() {
@@ -212,7 +211,7 @@
         fill(255, 180);
         textSize(18);
         text('Type your answer and press ENTER', width/2, height/2 + 120);
-        text('Press H for help • Press ESC to return to verb selection', width/2, height/2 + 145);
+        text('Press 0 for help • Press ESC to return to verb selection', width/2, height/2 + 145);
 
         if (feedbackTimer > 0) {
             if (feedback.includes('Correct')) {
@@ -259,7 +258,7 @@
 
         fill(100);
         textSize(14);
-        text("Press H again to close", width/2, height/2 + panelHeight/2 - 20);
+        text("Press 0 again to close", width/2, height/2 + panelHeight/2 - 20);
     }
 
     function drawResults() {
@@ -366,7 +365,8 @@
                 checkAnswer();
             } else if (keyCode === BACKSPACE) {
                 userInput = userInput.slice(0, -1);
-            } else if (key.length === 1 && userInput.length < 30) {
+            } else if (key.length === 1 && key !== '0' && userInput.length < 30) {
+                // אל תכניס את '0' לטקסט, הוא שמור לעזרה
                 userInput += key;
             }
         }
