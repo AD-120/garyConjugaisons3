@@ -110,17 +110,22 @@
         }
     }
 
+    function stripAccents(str) {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
     function draw() {
         background(0);
-        for (let i = 0; i < 100; i++) {
-            let x = (frameCount * 0.5 + i * 50) % (width + 100);
-            let y = (i * 37) % height;
-            fill(100 + sin(frameCount * 0.01 + i) * 50, 50, 150, 100);
-            noStroke();
-            circle(x, y, 20);
-        }
 
         if (gameState === 'verbSelection') {
+            // אנימציה רק במסך בחירת הפעלים
+            for (let i = 0; i < 100; i++) {
+                let x = (frameCount * 0.5 + i * 50) % (width + 100);
+                let y = (i * 37) % height;
+                fill(100 + sin(frameCount * 0.01 + i) * 50, 50, 150, 100);
+                noStroke();
+                circle(x, y, 20);
+            }
             drawVerbSelection();
         } else if (gameState === 'playing') {
             drawGameplay();
@@ -141,7 +146,6 @@
 
         let verbs = Object.keys(conjugations);
         let cols = 4;
-        let rows = Math.ceil(verbs.length / cols);
         let startX = width/2 - (cols * 200) / 2;
         let startY = 200;
 
@@ -165,18 +169,25 @@
             text(verbs[i], x, y);
         }
 
+        // כפתור Start Game בצד ימין למטה
         if (selectedVerbs.length > 0) {
+            let btnW = 240;
+            let btnH = 60;
+            let btnX = width - btnW - 40;
+            let btnY = height - btnH - 40;
+
             fill(200, 100, 100, 200);
-            rect(width/2 - 100, height - 150, 200, 60, 15);
+            rect(btnX, btnY, btnW, btnH, 15);
             fill(255);
             textSize(24);
-            text(`Start Game (${selectedVerbs.length} verbs)`, width/2, height - 120);
+            text(`Start Game (${selectedVerbs.length})`, btnX + btnW/2, btnY + btnH/2);
         }
 
+        // טקסט מידע נשאר בתחתית אמצע
         fill(255, 200);
         textSize(16);
-        text('Selected: ' + selectedVerbs.length + ' verbs', width/2, height - 60);
-        text('Press 0 during game to toggle help', width/2, height - 40);
+        text('Selected: ' + selectedVerbs.length + ' verbs', width/2, height - 100);
+        text('Press 0 during game to toggle help', width/2, height - 80);
     }
 
     function drawGameplay() {
@@ -206,7 +217,8 @@
         fill(0);
         textSize(32);
         textStyle(NORMAL);
-        text(userInput + (inputActive && frameCount % 60 < 30 ? '|' : ''), width/2, height/2 + 50);
+        // בלי סמן בכלל
+        text(userInput, width/2, height/2 + 50);
 
         fill(255, 180);
         textSize(18);
@@ -233,32 +245,27 @@
     function drawHelpOverlay() {
         let qVerb = questions[currentQuestion].verb;
 
-        fill(0, 0, 0, 150);
-        rect(0, 0, width, height);
+        let panelWidth = min(400, width / 3);
+        let panelHeight = height - 100;
+        let x = width - panelWidth - 20;
+        let y = 50;
 
-        fill(255);
-        let panelWidth = min(600, width - 100);
-        let panelHeight = min(400, height - 100);
-        rect(width/2 - panelWidth/2, height/2 - panelHeight/2, panelWidth, panelHeight, 15);
+        fill(255, 255, 255, 230);
+        rect(x, y, panelWidth, panelHeight, 15);
 
         fill(0);
-        textSize(28);
+        textSize(24);
         textStyle(BOLD);
-        text(qVerb.toUpperCase(), width/2, height/2 - panelHeight/2 + 40);
-
-        textSize(20);
-        text(`(${translations[qVerb] || "—"})`, width/2, height/2 - panelHeight/2 + 80);
+        text(qVerb.toUpperCase(), x + panelWidth / 2, y + 40);
 
         textSize(18);
+        text(`(${translations[qVerb] || "—"})`, x + panelWidth / 2, y + 70);
+
         textStyle(NORMAL);
         let lineHeight = 28;
         for (let j = 0; j < 6; j++) {
-            text(`${pronouns[j]} ${conjugations[qVerb][j]}`, width/2, height/2 - 60 + j * lineHeight);
+            text(`${pronouns[j]} ${conjugations[qVerb][j]}`, x + panelWidth / 2, y + 120 + j * lineHeight);
         }
-
-        fill(100);
-        textSize(14);
-        text("Press 0 again to close", width/2, height/2 + panelHeight/2 - 20);
     }
 
     function drawResults() {
@@ -267,10 +274,10 @@
         textStyle(BOLD);
         text('Game Complete!', width/2, 150);
 
-        textSize(36);
         let percentage = Math.round((score / totalQuestions) * 100);
         fill(score === totalQuestions ? color(100, 255, 100) :
             percentage >= 70 ? color(255, 255, 100) : color(255, 150, 150));
+        textSize(36);
         text(`Score: ${score}/${totalQuestions} (${percentage}%)`, width/2, 220);
 
         fill(255);
@@ -291,17 +298,26 @@
             y += 25;
         }
 
+        // כפתור שחק שוב
         fill(100, 200, 100, 200);
-        rect(width/2 - 100, height - 150, 200, 60, 15);
+        rect(width/2 - 100, height - 200, 200, 60, 15);
         fill(255);
         textSize(24);
-        text('Play Again', width/2, height - 120);
+        text('Play Again', width/2, height - 170);
 
+        // כפתור שינוי פעלים
         fill(100, 100, 200, 200);
-        rect(width/2 - 100, height - 80, 200, 50, 15);
+        rect(width/2 - 100, height - 130, 200, 50, 15);
         fill(255);
         textSize(18);
-        text('Change Verbs', width/2, height - 55);
+        text('Change Verbs', width/2, height - 100);
+
+        // כפתור חזרה לדף הבית
+        fill(200, 100, 100, 200);
+        rect(width/2 - 100, height - 60, 200, 50, 15);
+        fill(255);
+        textSize(18);
+        text('Home', width/2, height - 35);
     }
 
     function mousePressed() {
@@ -328,19 +344,26 @@
                 }
             }
 
+            // בדיקה ללחיצה על Start Game בצד ימין
+            let btnW = 240;
+            let btnH = 60;
+            let btnX = width - btnW - 40;
+            let btnY = height - btnH - 40;
             if (selectedVerbs.length > 0 &&
-                mouseX > width/2 - 100 && mouseX < width/2 + 100 &&
-                mouseY > height - 150 && mouseY < height - 90) {
+                mouseX > btnX && mouseX < btnX + btnW &&
+                mouseY > btnY && mouseY < btnY + btnH) {
                 startGame();
             }
+
         } else if (gameState === 'results') {
-            if (mouseX > width/2 - 100 && mouseX < width/2 + 100 &&
-                mouseY > height - 150 && mouseY < height - 90) {
-                startGame();
-            }
-            if (mouseX > width/2 - 100 && mouseX < width/2 + 100 &&
-                mouseY > height - 80 && mouseY < height - 30) {
-                gameState = 'verbSelection';
+            if (mouseX > width/2 - 100 && mouseX < width/2 + 100) {
+                if (mouseY > height - 200 && mouseY < height - 140) {
+                    startGame();
+                } else if (mouseY > height - 130 && mouseY < height - 80) {
+                    gameState = 'verbSelection';
+                } else if (mouseY > height - 60 && mouseY < height - 10) {
+                    initializeGame(); // חזרה לדף הבית
+                }
             }
         }
     }
@@ -366,7 +389,6 @@
             } else if (keyCode === BACKSPACE) {
                 userInput = userInput.slice(0, -1);
             } else if (key.length === 1 && key !== '0' && userInput.length < 30) {
-                // אל תכניס את '0' לטקסט, הוא שמור לעזרה
                 userInput += key;
             }
         }
@@ -374,8 +396,8 @@
 
     function checkAnswer() {
         let q = questions[currentQuestion];
-        let userAnswer = userInput.trim().toLowerCase();
-        let correctAnswers = q.correctAnswer.toLowerCase().split('/');
+        let userAnswer = stripAccents(userInput.trim().toLowerCase());
+        let correctAnswers = q.correctAnswer.split('/').map(a => stripAccents(a.toLowerCase()));
 
         let isCorrect = correctAnswers.some(answer => answer === userAnswer);
 
