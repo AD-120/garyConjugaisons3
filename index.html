@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>French Verb Conjugation Trainer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<script>
+    let gameState = 'loading'; // loading, verbSelection, playing, results
+    let conjTable;
+    let conjugations = {};
+    let selectedVerbs = [];
+    let currentQuestion = 0;
+    let totalQuestions = 8;
+    let questions = [];
+    let score = 0;
+    let showHelp = false;
+    let userInput = '';
+    let inputActive = false;
+    let feedback = '';
+    let feedbackTimer = 0;
+
+    const pronouns = ['je', 'tu', 'il/elle', 'nous', 'vous', 'ils/elles'];
+
+    // מילון תרגומים לעברית
+    let translations = {
+        "être": "להיות",
+        "avoir": "יש / להחזיק",
+        "parler": "לדבר",
+        "s'appeler": "להיקרא",
+        "payer": "לשלם",
+        "aller": "ללכת",
+        "ouvrir": "לפתוח",
+        "finir": "לסיים",
+        "partir": "לעזוב",
+        "dormir": "לישון",
+        "venir": "לבוא",
+        "lire": "לקרוא",
+        "connaître": "להכיר",
+        "écrire": "לכתוב",
+        "faire": "לעשות",
+        "dire": "לומר",
+        "mettre": "לשים",
+        "prendre": "לקחת",
+        "boire": "לשתות",
+        "savoir": "לדעת",
+        "voir": "לראות",
+        "devoir": "צריך / להיות חייב",
+        "pouvoir": "להיות יכול",
+        "vouloir": "לרצות"
+    };
+
+    function preload() {
+        // נטען את הקובץ conj.csv (חייב להיות באותה תיקייה)
+        conjTable = loadTable("conj.csv", "csv", "header");
+    }
+
+    function setup() {
+        createCanvas(windowWidth, windowHeight);
+        textAlign(CENTER, CENTER);
+        processConjTable();
+        initializeGame();
+    }
+
+    function processConjTable() {
+        for (let r = 0; r < conjTable.getRowCount(); r++) {
+            let verb = conjTable.getString(r, "verb");
+            conjugations[verb] = [
+                conjTable.getString(r, "je"),
+                conjTable.getString(r, "tu"),
+                conjTable.getString(r, "il/elle"),
+                conjTable.getString(r, "nous"),
+                conjTable.getString(r, "vous"),
+                conjTable.getString(r, "ils/elles")
+            ];
+        }
+    }
+
+    function initializeGame() {
+        gameState = 'verbSelection';
+        selectedVerbs = [];
+    }
+
+    function generateQuestions() {
+        questions = [];
+        for (let i = 0; i < totalQuestions; i++) {
+            const verb = random(selectedVerbs);
+            const pronounIndex = floor(random(6));
+            questions.push({
+                verb: verb,
+                pronoun: pronouns[pronounIndex],
+                pronounIndex: pronounIndex,
+                correctAnswer: conjugations[verb][pronounIndex],
+                userAnswer: '',
+                correct: null
+            });
+        }
+    }
+
+    function draw() {
+        background(0);
+        for (let i = 0; i < 100; i++) {
+            let x = (frameCount * 0.5 + i * 50) % (width + 100);
+            let y = (i * 37) % height;
+            fill(100 + sin(frameCount * 0.01 + i) * 50, 50, 150, 100);
+            noStroke();
+            circle(x, y, 20);
+        }
+
+        if (gameState === 'verbSelection') {
+            drawVerbSelection();
+        } else if (gameState === 'playing') {
+            drawGameplay();
+        } else if (gameState === 'results') {
+            drawResults();
+        }
+    }
+
+    function drawVerbSelection() {
+        fill(255);
+        textSize(48);
+        textStyle(BOLD);
+        text('French Verb Conjugation Trainer', width/2, 100);
+
+        textSize(24);
+        textStyle(NORMAL);
+        text('Select verbs to practice (click to toggle)', width/2, 150);
+
+        let verbs = Object.keys(conjugations);
+        let cols = 4;
+        let rows = Math.ceil(verbs.length / cols);
+        let startX = width/2 - (cols * 200) / 2;
+        let startY = 200;
+
+        for (let i = 0; i < verbs.length; i++) {
+            let col = i % cols;
+            let row = floor(i / cols);
+            let x = startX + col * 200;
+            let y = startY + row * 80;
+
+            let isSelected = selectedVerbs.includes(verbs[i]);
+
+            if (isSelected) {
+                fill(100, 200, 100, 200);
+            } else {
+                fill(100, 100, 200, 150);
+            }
+            rect(x - 80, y - 25, 160, 50, 10);
+
+            fill(255);
+            textSize(18);
+            text(verbs[i], x, y);
+        }
+
+        if (selectedVerbs.length > 0) {
+            fill(200, 100, 100, 200);
+            rect(width/2 - 100, height - 150, 200, 60, 15);
+            fill(255);
+            textSize(24);
+            text(`Start Game (${selectedVerbs.length} verbs)`, width/2, height - 120);
+        }
+
+        fill(255, 200);
+        textSize(16);
+        text('Selected: ' + selectedVerbs.length + ' verbs', width/2, height - 60);
+        text('Press H during game to toggle help', width/2, height - 40);
+    }
+
+    function drawGameplay() {
+        let q = questions[currentQuestion];
+
+        fill(100, 200, 100);
+        rect(50, 50, (width - 100) * (currentQuestion / totalQuestions), 20, 10);
+        stroke(255);
+        strokeWeight(2);
+        noFill();
+        rect(50, 50, width - 100, 20, 10);
+
+        fill(255);
+        textSize(20);
+        noStroke();
+        text(`Question ${currentQuestion + 1} of ${totalQuestions}`, width/2, 100);
+        text(`Score: ${score}/${currentQuestion}`, width/2, 130);
+
+        textSize(48);
+        textStyle(BOLD);
+        fill(255, 255, 150);
+        text(`${q.pronoun} __________ (${q.verb})`, width/2, height/2 - 50);
+
+        fill(255, 255, 255, 200);
+        rect(width/2 - 200, height/2 + 20, 400, 60, 10);
+
+        fill(0);
+        textSize(32);
+        textStyle(NORMAL);
+        text(userInput + (inputActive && frameCount % 60 < 30 ? '|' : ''), width/2, height/2 + 50);
+
+        fill(255, 180);
+        textSize(18);
+        text('Type your answer and press ENTER', width/2, height/2 + 120);
+        text('Press H for help • Press ESC to return to verb selection', width/2, height/2 + 145);
+
+        if (feedbackTimer > 0) {
+            if (feedback.includes('Correct')) {
+                fill(100, 255, 100);
+            } else {
+                fill(255, 100, 100);
+            }
+            textSize(24);
+            textStyle(BOLD);
+            text(feedback, width/2, height/2 + 180);
+            feedbackTimer--;
+        }
+
+        if (showHelp) {
+            drawHelpOverlay();
+        }
+    }
+
+    function drawHelpOverlay() {
+        let qVerb = questions[currentQuestion].verb;
+
+        fill(0, 0, 0, 150);
+        rect(0, 0, width, height);
+
+        fill(255);
+        let panelWidth = min(600, width - 100);
+        let panelHeight = min(400, height - 100);
+        rect(width/2 - panelWidth/2, height/2 - panelHeight/2, panelWidth, panelHeight, 15);
+
+        fill(0);
+        textSize(28);
+        textStyle(BOLD);
+        text(qVerb.toUpperCase(), width/2, height/2 - panelHeight/2 + 40);
+
+        textSize(20);
+        text(`(${translations[qVerb] || "—"})`, width/2, height/2 - panelHeight/2 + 80);
+
+        textSize(18);
+        textStyle(NORMAL);
+        let lineHeight = 28;
+        for (let j = 0; j < 6; j++) {
+            text(`${pronouns[j]} ${conjugations[qVerb][j]}`, width/2, height/2 - 60 + j * lineHeight);
+        }
+
+        fill(100);
+        textSize(14);
+        text("Press H again to close", width/2, height/2 + panelHeight/2 - 20);
+    }
+
+    function drawResults() {
+        fill(255);
+        textSize(48);
+        textStyle(BOLD);
+        text('Game Complete!', width/2, 150);
+
+        textSize(36);
+        let percentage = Math.round((score / totalQuestions) * 100);
+        fill(score === totalQuestions ? color(100, 255, 100) :
+            percentage >= 70 ? color(255, 255, 100) : color(255, 150, 150));
+        text(`Score: ${score}/${totalQuestions} (${percentage}%)`, width/2, 220);
+
+        fill(255);
+        textSize(20);
+        textStyle(NORMAL);
+        text('Review:', width/2, 300);
+
+        let y = 340;
+        for (let i = 0; i < questions.length; i++) {
+            let q = questions[i];
+            fill(q.correct ? color(100, 255, 100) : color(255, 150, 150));
+            textSize(16);
+            text(`${q.pronoun} ${q.userAnswer || '(no answer)'} (${q.verb})`, width/2 - 150, y);
+            if (!q.correct) {
+                fill(255, 255, 100);
+                text(`→ ${q.correctAnswer}`, width/2 + 50, y);
+            }
+            y += 25;
+        }
+
+        fill(100, 200, 100, 200);
+        rect(width/2 - 100, height - 150, 200, 60, 15);
+        fill(255);
+        textSize(24);
+        text('Play Again', width/2, height - 120);
+
+        fill(100, 100, 200, 200);
+        rect(width/2 - 100, height - 80, 200, 50, 15);
+        fill(255);
+        textSize(18);
+        text('Change Verbs', width/2, height - 55);
+    }
+
+    function mousePressed() {
+        if (gameState === 'verbSelection') {
+            let verbs = Object.keys(conjugations);
+            let cols = 4;
+            let startX = width/2 - (cols * 200) / 2;
+            let startY = 200;
+
+            for (let i = 0; i < verbs.length; i++) {
+                let col = i % cols;
+                let row = floor(i / cols);
+                let x = startX + col * 200;
+                let y = startY + row * 80;
+
+                if (mouseX > x - 80 && mouseX < x + 80 && mouseY > y - 25 && mouseY < y + 25) {
+                    let verb = verbs[i];
+                    let index = selectedVerbs.indexOf(verb);
+                    if (index > -1) {
+                        selectedVerbs.splice(index, 1);
+                    } else {
+                        selectedVerbs.push(verb);
+                    }
+                }
+            }
+
+            if (selectedVerbs.length > 0 &&
+                mouseX > width/2 - 100 && mouseX < width/2 + 100 &&
+                mouseY > height - 150 && mouseY < height - 90) {
+                startGame();
+            }
+        } else if (gameState === 'results') {
+            if (mouseX > width/2 - 100 && mouseX < width/2 + 100 &&
+                mouseY > height - 150 && mouseY < height - 90) {
+                startGame();
+            }
+            if (mouseX > width/2 - 100 && mouseX < width/2 + 100 &&
+                mouseY > height - 80 && mouseY < height - 30) {
+                gameState = 'verbSelection';
+            }
+        }
+    }
+
+    function startGame() {
+        generateQuestions();
+        currentQuestion = 0;
+        score = 0;
+        userInput = '';
+        inputActive = true;
+        gameState = 'playing';
+    }
+
+    function keyPressed() {
+        if (gameState === 'playing') {
+            if (key === 'h' || key === 'H') {
+                showHelp = !showHelp;
+            } else if (keyCode === ESCAPE) {
+                gameState = 'verbSelection';
+                showHelp = false;
+            } else if (keyCode === ENTER && userInput.trim() !== '') {
+                checkAnswer();
+            } else if (keyCode === BACKSPACE) {
+                userInput = userInput.slice(0, -1);
+            } else if (key.length === 1 && userInput.length < 30) {
+                userInput += key;
+            }
+        }
+    }
+
+    function checkAnswer() {
+        let q = questions[currentQuestion];
+        let userAnswer = userInput.trim().toLowerCase();
+        let correctAnswers = q.correctAnswer.toLowerCase().split('/');
+
+        let isCorrect = correctAnswers.some(answer => answer === userAnswer);
+
+        q.userAnswer = userInput.trim();
+        q.correct = isCorrect;
+
+        if (isCorrect) {
+            score++;
+            feedback = 'Correct! ✓';
+        } else {
+            feedback = `Incorrect. Answer: ${q.correctAnswer}`;
+        }
+
+        feedbackTimer = 120;
+        userInput = '';
+
+        setTimeout(() => {
+            currentQuestion++;
+            if (currentQuestion >= totalQuestions) {
+                gameState = 'results';
+                showHelp = false;
+            }
+            feedbackTimer = 0;
+            feedback = '';
+        }, 2000);
+    }
+
+    function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+    }
+</script>
+</body>
+</html>
